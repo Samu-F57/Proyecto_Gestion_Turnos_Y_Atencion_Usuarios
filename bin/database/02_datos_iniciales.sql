@@ -1,5 +1,7 @@
+-- =====================================================================
 -- 02_datos_iniciales.sql  |  Datos de referencia y de demostración
-
+-- Uso:  psql -U postgres -d gestion_turnos_db -f database/02_datos_iniciales.sql
+-- =====================================================================
 BEGIN;
 
 INSERT INTO prioridades (nombre, descripcion, nivel, requiere_autorizacion) VALUES

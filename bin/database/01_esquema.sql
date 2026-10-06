@@ -1,10 +1,15 @@
-
+-- =====================================================================
 -- 01_esquema.sql  |  Esquema de Gestión de turnos y atención al usuario
-
+-- Uso:  psql -U postgres -d gestion_turnos_db -f database/01_esquema.sql
+-- Los nombres coinciden con las entidades JPA (paquete domain).
+-- Reglas de negocio (RN) cubiertas en la base de datos: 01, 03, 04, 06,
+-- 07, 08 (índice de fila), 09 (historial) y 12 (vista de tiempos).
+-- =====================================================================
 BEGIN;
 
---Usuarios internos (agente, coordinador, administrador técnico)
-
+-- ---------------------------------------------------------------------
+-- 1. Usuarios internos (agente, coordinador, administrador técnico)
+-- ---------------------------------------------------------------------
 CREATE TABLE usuarios_internos (
     id              BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     nombre_completo VARCHAR(120) NOT NULL,
@@ -17,8 +22,9 @@ CREATE TABLE usuarios_internos (
 );
 CREATE UNIQUE INDEX uq_usuarios_internos_correo ON usuarios_internos (lower(correo));
 
--- Solicitantes (personas que piden turno)
-
+-- ---------------------------------------------------------------------
+-- 2. Solicitantes (personas que piden turno)
+-- ---------------------------------------------------------------------
 CREATE TABLE solicitantes (
     id               BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     tipo_documento   VARCHAR(15)  NOT NULL,
@@ -32,9 +38,10 @@ CREATE TABLE solicitantes (
     CONSTRAINT uq_solicitantes_documento UNIQUE (tipo_documento, numero_documento)
 );
 
-
--- Servicios (orientación, recepción de documentos, soporte, trámites)
-
+-- ---------------------------------------------------------------------
+-- 3. Servicios (orientación, recepción de documentos, soporte, trámites)
+--    "codigo" es el prefijo que se imprime en el turno (ej. ORI).
+-- ---------------------------------------------------------------------
 CREATE TABLE servicios (
     id                   BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     codigo               VARCHAR(10)  NOT NULL,
@@ -51,9 +58,9 @@ CREATE TABLE servicios (
     CONSTRAINT ck_servicios_horario CHECK (hora_cierre > hora_apertura)   -- RN-02
 );
 
-
--- Prioridades autorizables. "nivel" mayor = se atiende primero.
-
+-- ---------------------------------------------------------------------
+-- 4. Prioridades autorizables. "nivel" mayor = se atiende primero.
+-- ---------------------------------------------------------------------
 CREATE TABLE prioridades (
     id                    BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     nombre                VARCHAR(50)  NOT NULL,
@@ -65,9 +72,9 @@ CREATE TABLE prioridades (
     CONSTRAINT ck_prioridades_nivel CHECK (nivel >= 0)
 );
 
-
--- Módulos de atención. El agente solo se asigna mientras está abierto.
-
+-- ---------------------------------------------------------------------
+-- 5. Módulos de atención. El agente solo se asigna mientras está abierto.
+-- ---------------------------------------------------------------------
 CREATE TABLE modulos (
     id             BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     codigo         VARCHAR(10)  NOT NULL,
@@ -83,9 +90,9 @@ CREATE TABLE modulos (
 );
 CREATE INDEX ix_modulos_agente ON modulos (agente_id);
 
-
--- Servicios habilitados por módulo (N:M)                     RN-06
-
+-- ---------------------------------------------------------------------
+-- 6. Servicios habilitados por módulo (N:M)                     RN-06
+-- ---------------------------------------------------------------------
 CREATE TABLE modulo_servicio (
     modulo_id   BIGINT NOT NULL,
     servicio_id BIGINT NOT NULL,
@@ -97,8 +104,15 @@ CREATE TABLE modulo_servicio (
 );
 CREATE INDEX ix_modulo_servicio_servicio ON modulo_servicio (servicio_id);
 
--- Secuencia de turnos por servicio y fecha operativa
-
+-- ---------------------------------------------------------------------
+-- 7. Secuencia de turnos por servicio y fecha operativa           RN-01
+--    Patrón atómico para el siguiente consecutivo (sin carreras):
+--      INSERT INTO secuencias_turno (servicio_id, fecha_operativa, ultimo_consecutivo)
+--      VALUES (:s, :f, 1)
+--      ON CONFLICT (servicio_id, fecha_operativa)
+--      DO UPDATE SET ultimo_consecutivo = secuencias_turno.ultimo_consecutivo + 1
+--      RETURNING ultimo_consecutivo;
+-- ---------------------------------------------------------------------
 CREATE TABLE secuencias_turno (
     servicio_id        BIGINT  NOT NULL,
     fecha_operativa    DATE    NOT NULL,
@@ -109,8 +123,12 @@ CREATE TABLE secuencias_turno (
     CONSTRAINT ck_secuencias_consecutivo CHECK (ultimo_consecutivo >= 0)
 );
 
--- Turnos. "codigo" = PREFIJO-yyMMdd-consecutivo (ej. ORI-261005-007),
-
+-- ---------------------------------------------------------------------
+-- 8. Turnos. "codigo" = PREFIJO-yyMMdd-consecutivo (ej. ORI-261005-007),
+--    único global para poder consultarlo en GET /api/turnos/{codigo}.
+--    modulo_id / agente_id guardan la asignación vigente; los instantes
+--    (llamado, inicio, fin) viven solo en historial_turnos       RN-12.
+-- ---------------------------------------------------------------------
 CREATE TABLE turnos (
     id                     BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     codigo                 VARCHAR(25) NOT NULL,
@@ -159,8 +177,11 @@ CREATE INDEX ix_turnos_solicitante ON turnos (solicitante_id);
 CREATE INDEX ix_turnos_prioridad   ON turnos (prioridad_id);
 CREATE INDEX ix_turnos_fecha_estado ON turnos (fecha_operativa, estado);
 
+-- ---------------------------------------------------------------------
 -- 9. Historial de turnos (solo se inserta, nunca se edita)  RN-09, RN-12
-
+--    estado_anterior es NULL en la emisión. usuario_id es NULL cuando el
+--    cambio lo hace el propio solicitante (ej. cancelar).
+-- ---------------------------------------------------------------------
 CREATE TABLE historial_turnos (
     id              BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     turno_id        BIGINT       NOT NULL,
@@ -181,9 +202,11 @@ CREATE TABLE historial_turnos (
 CREATE INDEX ix_historial_turno  ON historial_turnos (turno_id, fecha_evento);
 CREATE INDEX ix_historial_estado ON historial_turnos (estado_nuevo, fecha_evento);
 
-
--- Vista de tiempos calculados desde el historial               RN-12
-
+-- ---------------------------------------------------------------------
+-- 10. Vista de tiempos calculados desde el historial               RN-12
+--     espera   = emisión -> llamado
+--     atención = inicio de atención -> finalización
+-- ---------------------------------------------------------------------
 CREATE VIEW v_turnos_tiempos AS
 SELECT t.id                AS turno_id,
        t.servicio_id,
