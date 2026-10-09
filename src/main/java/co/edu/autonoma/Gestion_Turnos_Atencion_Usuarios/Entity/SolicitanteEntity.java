@@ -1,5 +1,6 @@
-package co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.domain;
+package co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.Entity;
 
+import co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.domain.TipoDocumento;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -12,25 +13,28 @@ import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "usuarios_internos")
-public class UsuarioInternoEntity {
+@Table(name = "solicitantes")
+public class SolicitanteEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo_documento", nullable = false, length = 15)
+    private TipoDocumento tipoDocumento;
+
+    @Column(name = "numero_documento", nullable = false, length = 30)
+    private String numeroDocumento;
+
     @Column(name = "nombre_completo", nullable = false, length = 120)
     private String nombreCompleto;
 
-    @Column(nullable = false, length = 150)
+    @Column(length = 150)
     private String correo;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private RolUsuario rol;
-
-    @Column(nullable = false)
-    private boolean activo = true;
+    @Column(length = 20)
+    private String telefono;
 
     @Column(name = "fecha_creacion", nullable = false, updatable = false)
     private LocalDateTime fechaCreacion;
@@ -41,6 +45,22 @@ public class UsuarioInternoEntity {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public TipoDocumento getTipoDocumento() {
+        return tipoDocumento;
+    }
+
+    public void setTipoDocumento(TipoDocumento tipoDocumento) {
+        this.tipoDocumento = tipoDocumento;
+    }
+
+    public String getNumeroDocumento() {
+        return numeroDocumento;
+    }
+
+    public void setNumeroDocumento(String numeroDocumento) {
+        this.numeroDocumento = numeroDocumento;
     }
 
     public String getNombreCompleto() {
@@ -59,20 +79,12 @@ public class UsuarioInternoEntity {
         this.correo = correo;
     }
 
-    public RolUsuario getRol() {
-        return rol;
+    public String getTelefono() {
+        return telefono;
     }
 
-    public void setRol(RolUsuario rol) {
-        this.rol = rol;
-    }
-
-    public boolean isActivo() {
-        return activo;
-    }
-
-    public void setActivo(boolean activo) {
-        this.activo = activo;
+    public void setTelefono(String telefono) {
+        this.telefono = telefono;
     }
 
     public LocalDateTime getFechaCreacion() {
