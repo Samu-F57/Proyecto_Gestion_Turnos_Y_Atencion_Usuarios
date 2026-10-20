@@ -1,4 +1,4 @@
-package co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.domain;
+package co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.Entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
