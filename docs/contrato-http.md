@@ -4,7 +4,7 @@ Origen de cada petición:
 
 - **Contrato**: está en la sección 8 del documento del proyecto.
 - **Propuesta**: no está en el contrato. Se deriva de los roles (sección 4), las reglas de negocio y las entidades, porque el documento permite sumar lo necesario para el CRUD. Las formas de entrada y respuesta marcadas como propuesta **no están definidas** en los requisitos.
-- **Implementado**: ya existe en el código (los 4 GET del contrato).
+- **Implementado**: ya existe en el código (los 4 GET y el POST de turnos).
 
 Errores: los implementados devuelven `{"estado": 404, "mensaje": "..."}` para recurso inexistente y 400 para parámetros ausentes o inválidos.
 
@@ -55,21 +55,23 @@ Errores: los implementados devuelven `{"estado": 404, "mensaje": "..."}` para re
  "tiempoPromedioEsperaSegundos": 750.0, "tiempoPromedioAtencionSegundos": 1080.0}
 ```
 
-### POST /api/turnos — Contrato, pendiente
-- **Propósito:** emite un turno aplicando servicio activo y horario (RN-02), duplicidad (RN-03) y secuencia por servicio y fecha (RN-01).
-- **Envía (propuesta):**
+### POST /api/turnos — Implementado
+- **Propósito:** emite un turno aplicando servicio activo y horario (RN-02), duplicidad (RN-03), secuencia por servicio y fecha (RN-01) y registro en el historial (RN-09).
+- **Envía:**
 ```json
 {"servicioId": 1,
  "solicitante": {"tipoDocumento": "CC", "numeroDocumento": "1020304050", "nombreCompleto": "Ana Pérez",
                  "correo": "ana@correo.com", "telefono": "3001234567"},
  "prioridadId": 1}
 ```
-- **Responde 201 (propuesta):**
+  `correo`, `telefono` y `prioridadId` son opcionales. Sin `prioridadId` se usa la prioridad `NORMAL`.
+- **Responde 201:**
 ```json
 {"id": 7, "codigo": "ORI-261005-007", "servicio": "Orientación", "estado": "EN_ESPERA",
  "fechaOperativa": "2026-10-05", "consecutivo": 7, "fechaEmision": "2026-10-05T08:00:00"}
 ```
-- **Falta definir:** si el solicitante se registra aquí o antes; cómo se pide y quién autoriza una prioridad; los códigos de error (duplicado, fuera de horario, servicio inactivo).
+- **Errores:** 400 si falta `servicioId` o los datos obligatorios del solicitante; 404 si el servicio o la prioridad no existen; 409 si el servicio está inactivo o fuera de horario, si el solicitante ya tiene un turno activo en ese servicio, o si la prioridad requiere autorización.
+- **Supuestos:** si el solicitante ya existe (mismo tipo y número de documento) se reutiliza sin actualizar sus datos. Las prioridades que requieren autorización se rechazan, porque el contrato no define cómo se autorizan. Los códigos 400, 404 y 409 son decisión del código, no del contrato.
 
 ### POST /api/modulos/{id}/siguiente-turno — Contrato, pendiente
 - **Propósito:** selecciona y llama el siguiente turno elegible del módulo (RN-06, RN-07, RN-08, RN-09).
@@ -128,3 +130,22 @@ Las respuestas de estas peticiones no están definidas; lo razonable es devolver
 - **Autenticación:** no hay requisito ni código (la rama `feature/login` solo trae archivos compilados). Sin ella, las peticiones de agente, coordinador y administrador no saben quién actúa.
 - **Códigos de error:** el documento no define cuáles devolver ante duplicado, horario o transición inválida.
 - **Prioridad autorizada:** no se define cómo se solicita ni quién la autoriza.
+
+## 4. DTOs por endpoint
+
+Están en el paquete `dto` (el proyecto usa una sola carpeta, con sufijo `Request` o `Response`). Los campos salen de los JSON de este documento.
+
+| Endpoint | Request | Response |
+|---|---|---|
+| GET /api/servicios | — | `ServicioResponse` |
+| GET /api/turnos/{codigo} | — | `TurnoPublicoResponse` |
+| GET /api/filas?servicioId= | — | `FilaResponse`, `FilaTurnoResponse` |
+| GET /api/indicadores?fecha= | — | `IndicadoresResponse` |
+| POST /api/turnos | `EmitirTurnoRequest`, `SolicitanteRequest` | `TurnoEmitidoResponse` |
+| POST /api/modulos/{id}/siguiente-turno | `LlamarSiguienteTurnoRequest` | `TurnoLlamadoResponse` |
+| PUT /api/servicios/{id} | `ActualizarServicioRequest` | `ServicioResponse` |
+| PATCH /api/turnos/{id}/estado | `CambiarEstadoTurnoRequest` | `TurnoEstadoResponse` |
+| PATCH /api/modulos/{id}/estado | `CambiarEstadoModuloRequest` | `ModuloEstadoResponse` |
+| DELETE /api/turnos/{id} | — | — (204 sin cuerpo) |
+
+Los errores comparten `ErrorResponse` (`estado`, `mensaje`).
