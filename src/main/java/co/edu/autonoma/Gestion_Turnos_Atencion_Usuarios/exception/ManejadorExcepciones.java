@@ -15,4 +15,16 @@ public class ManejadorExcepciones {
     public ErrorResponse manejarNoEncontrado(RecursoNoEncontradoException ex) {
         return new ErrorResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage());
     }
+
+    @ExceptionHandler(ReglaNegocioException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public ErrorResponse manejarReglaNegocio(ReglaNegocioException ex) {
+        return new ErrorResponse(HttpStatus.CONFLICT.value(), ex.getMessage());
+    }
+
+    @ExceptionHandler(SolicitudInvalidaException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse manejarSolicitudInvalida(SolicitudInvalidaException ex) {
+        return new ErrorResponse(HttpStatus.BAD_REQUEST.value(), ex.getMessage());
+    }
 }
