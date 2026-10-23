@@ -1,6 +1,7 @@
 package co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.repository;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -31,4 +32,8 @@ public interface TurnoRepository extends JpaRepository<TurnoEntity, Long> {
             @Param("estado") EstadoTurno estado);
 
     long countByFechaOperativaAndEstado(LocalDate fecha, EstadoTurno estado);
+
+    // RN-03: un solicitante no puede tener dos turnos activos para el mismo servicio
+    boolean existsBySolicitanteIdAndServicioIdAndEstadoIn(
+            Long solicitanteId, Long servicioId, Collection<EstadoTurno> estados);
 }
