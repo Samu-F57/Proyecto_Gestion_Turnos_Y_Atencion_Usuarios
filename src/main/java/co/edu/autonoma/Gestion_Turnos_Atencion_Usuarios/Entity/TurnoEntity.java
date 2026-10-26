@@ -1,4 +1,4 @@
-package co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.domain;
+package co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.Entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -14,6 +14,7 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.domain.EstadoTurno;
 
 @Entity
 @Table(name = "turnos")
