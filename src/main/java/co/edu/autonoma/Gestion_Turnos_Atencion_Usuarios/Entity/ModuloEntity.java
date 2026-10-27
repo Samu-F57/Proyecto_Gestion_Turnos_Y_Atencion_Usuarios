@@ -1,5 +1,6 @@
 package co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.Entity;
 
+import co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.domain.EstadoModulo;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -17,10 +18,13 @@ import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
-import co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.domain.EstadoModulo;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
 @Table(name = "modulos")
+@Getter
+@Setter
 public class ModuloEntity {
 
     @Id
@@ -51,67 +55,10 @@ public class ModuloEntity {
     @Column(name = "fecha_creacion", nullable = false, updatable = false)
     private LocalDateTime fechaCreacion;
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getCodigo() {
-        return codigo;
-    }
-
-    public void setCodigo(String codigo) {
-        this.codigo = codigo;
-    }
-
-    public String getNombre() {
-        return nombre;
-    }
-
-    public void setNombre(String nombre) {
-        this.nombre = nombre;
-    }
-
-    public EstadoModulo getEstado() {
-        return estado;
-    }
-
-    public void setEstado(EstadoModulo estado) {
-        this.estado = estado;
-    }
-
-    public UsuarioInternoEntity getAgente() {
-        return agente;
-    }
-
-    public void setAgente(UsuarioInternoEntity agente) {
-        this.agente = agente;
-    }
-
-    public Set<ServicioEntity> getServicios() {
-        return servicios;
-    }
-
-    public void setServicios(Set<ServicioEntity> servicios) {
-        this.servicios = servicios;
-    }
-
-    public LocalDateTime getFechaCreacion() {
-        return fechaCreacion;
-    }
-
-    public void setFechaCreacion(LocalDateTime fechaCreacion) {
-        this.fechaCreacion = fechaCreacion;
-    }
-
     @PrePersist
     void antesDeInsertar() {
         if (fechaCreacion == null) {
             fechaCreacion = LocalDateTime.now();
         }
     }
-
 }

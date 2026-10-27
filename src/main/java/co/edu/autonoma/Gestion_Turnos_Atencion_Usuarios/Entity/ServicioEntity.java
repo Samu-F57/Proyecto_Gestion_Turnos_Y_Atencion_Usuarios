@@ -10,9 +10,13 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
 @Table(name = "servicios")
+@Getter
+@Setter
 public class ServicioEntity {
 
     @Id
@@ -43,78 +47,6 @@ public class ServicioEntity {
     @Column(name = "fecha_actualizacion", nullable = false)
     private LocalDateTime fechaActualizacion;
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getCodigo() {
-        return codigo;
-    }
-
-    public void setCodigo(String codigo) {
-        this.codigo = codigo;
-    }
-
-    public String getNombre() {
-        return nombre;
-    }
-
-    public void setNombre(String nombre) {
-        this.nombre = nombre;
-    }
-
-    public String getDescripcion() {
-        return descripcion;
-    }
-
-    public void setDescripcion(String descripcion) {
-        this.descripcion = descripcion;
-    }
-
-    public boolean isActivo() {
-        return activo;
-    }
-
-    public void setActivo(boolean activo) {
-        this.activo = activo;
-    }
-
-    public LocalTime getHoraApertura() {
-        return horaApertura;
-    }
-
-    public void setHoraApertura(LocalTime horaApertura) {
-        this.horaApertura = horaApertura;
-    }
-
-    public LocalTime getHoraCierre() {
-        return horaCierre;
-    }
-
-    public void setHoraCierre(LocalTime horaCierre) {
-        this.horaCierre = horaCierre;
-    }
-
-    public LocalDateTime getFechaCreacion() {
-        return fechaCreacion;
-    }
-
-    public void setFechaCreacion(LocalDateTime fechaCreacion) {
-        this.fechaCreacion = fechaCreacion;
-    }
-
-    public LocalDateTime getFechaActualizacion() {
-        return fechaActualizacion;
-    }
-
-    public void setFechaActualizacion(LocalDateTime fechaActualizacion) {
-        this.fechaActualizacion = fechaActualizacion;
-    }
-
     @PrePersist
     void antesDeInsertar() {
         LocalDateTime ahora = LocalDateTime.now();
@@ -128,5 +60,4 @@ public class ServicioEntity {
     void antesDeActualizar() {
         fechaActualizacion = LocalDateTime.now();
     }
-
 }

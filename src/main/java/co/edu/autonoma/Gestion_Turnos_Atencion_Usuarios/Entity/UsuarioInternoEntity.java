@@ -1,5 +1,6 @@
 package co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.Entity;
 
+import co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.domain.RolUsuario;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -10,10 +11,13 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
-import co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.domain.RolUsuario;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
 @Table(name = "usuarios_internos")
+@Getter
+@Setter
 public class UsuarioInternoEntity {
 
     @Id
@@ -36,59 +40,10 @@ public class UsuarioInternoEntity {
     @Column(name = "fecha_creacion", nullable = false, updatable = false)
     private LocalDateTime fechaCreacion;
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getNombreCompleto() {
-        return nombreCompleto;
-    }
-
-    public void setNombreCompleto(String nombreCompleto) {
-        this.nombreCompleto = nombreCompleto;
-    }
-
-    public String getCorreo() {
-        return correo;
-    }
-
-    public void setCorreo(String correo) {
-        this.correo = correo;
-    }
-
-    public RolUsuario getRol() {
-        return rol;
-    }
-
-    public void setRol(RolUsuario rol) {
-        this.rol = rol;
-    }
-
-    public boolean isActivo() {
-        return activo;
-    }
-
-    public void setActivo(boolean activo) {
-        this.activo = activo;
-    }
-
-    public LocalDateTime getFechaCreacion() {
-        return fechaCreacion;
-    }
-
-    public void setFechaCreacion(LocalDateTime fechaCreacion) {
-        this.fechaCreacion = fechaCreacion;
-    }
-
     @PrePersist
     void antesDeInsertar() {
         if (fechaCreacion == null) {
             fechaCreacion = LocalDateTime.now();
         }
     }
-
 }
