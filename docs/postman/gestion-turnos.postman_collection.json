@@ -1,0 +1,203 @@
+{
+  "info": {
+    "name": "Gestión de turnos - pruebas de endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Ejecutar en orden: 1) listar servicios, 2) emitir turno (guarda el código), 3) consultar turno. Requiere la aplicación en http://localhost:8080 y PostgreSQL con los scripts de database/."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "codigo",
+      "value": ""
+    },
+    {
+      "key": "servicioId",
+      "value": "1"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. GET listar servicios activos",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Devuelve una lista', function () { pm.expect(pm.response.json()).to.be.an('array'); });",
+              "const servicios = pm.response.json();",
+              "if (servicios.length > 0) { pm.collectionVariables.set('servicioId', servicios[0].id); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/servicios",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "servicios"
+          ]
+        },
+        "description": "Lista los servicios activos. Guarda el id del primero para el siguiente paso."
+      }
+    },
+    {
+      "name": "2. POST emitir turno",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 201', function () { pm.response.to.have.status(201); });",
+              "const turno = pm.response.json();",
+              "pm.test('Turno en espera con código', function () { pm.expect(turno.estado).to.eql('EN_ESPERA'); pm.expect(turno.codigo).to.be.a('string'); });",
+              "pm.collectionVariables.set('codigo', turno.codigo);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/turnos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "turnos"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"servicioId\": {{servicioId}},\n  \"solicitante\": {\n    \"tipoDocumento\": \"CC\",\n    \"numeroDocumento\": \"1020304050\",\n    \"nombreCompleto\": \"Ana Pérez\",\n    \"correo\": \"ana@correo.com\",\n    \"telefono\": \"3001234567\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "description": "Emite un turno. Solo funciona dentro del horario del servicio; si el solicitante ya tiene un turno activo en ese servicio responde 409."
+      }
+    },
+    {
+      "name": "3. GET consultar turno por código",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Devuelve el turno emitido', function () { pm.expect(pm.response.json().codigo).to.eql(pm.collectionVariables.get('codigo')); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/turnos/{{codigo}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "turnos",
+            "{{codigo}}"
+          ]
+        },
+        "description": "Estado público del turno emitido en el paso 2."
+      }
+    },
+    {
+      "name": "4. GET fila de un servicio",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Incluye la lista de turnos', function () { pm.expect(pm.response.json().turnos).to.be.an('array'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/filas?servicioId={{servicioId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "filas"
+          ],
+          "query": [
+            {
+              "key": "servicioId",
+              "value": "{{servicioId}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "5. GET indicadores del día",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Incluye cantidadAtendida', function () { pm.expect(pm.response.json()).to.have.property('cantidadAtendida'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/indicadores?fecha=2026-10-05",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "indicadores"
+          ],
+          "query": [
+            {
+              "key": "fecha",
+              "value": "2026-10-05"
+            }
+          ]
+        },
+        "description": "Cambia la fecha por el día que quieras consultar (formato yyyy-MM-dd)."
+      }
+    }
+  ]
+}
