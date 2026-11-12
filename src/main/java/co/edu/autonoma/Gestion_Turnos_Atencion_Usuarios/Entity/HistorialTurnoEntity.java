@@ -1,5 +1,6 @@
 package co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.Entity;
 
+import co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.domain.EstadoTurno;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -13,10 +14,13 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
-import co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.domain.EstadoTurno;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
 @Table(name = "historial_turnos")
+@Getter
+@Setter
 public class HistorialTurnoEntity {
 
     @Id
@@ -49,75 +53,10 @@ public class HistorialTurnoEntity {
     @Column(length = 255, updatable = false)
     private String observacion;
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public TurnoEntity getTurno() {
-        return turno;
-    }
-
-    public void setTurno(TurnoEntity turno) {
-        this.turno = turno;
-    }
-
-    public EstadoTurno getEstadoAnterior() {
-        return estadoAnterior;
-    }
-
-    public void setEstadoAnterior(EstadoTurno estadoAnterior) {
-        this.estadoAnterior = estadoAnterior;
-    }
-
-    public EstadoTurno getEstadoNuevo() {
-        return estadoNuevo;
-    }
-
-    public void setEstadoNuevo(EstadoTurno estadoNuevo) {
-        this.estadoNuevo = estadoNuevo;
-    }
-
-    public LocalDateTime getFechaEvento() {
-        return fechaEvento;
-    }
-
-    public void setFechaEvento(LocalDateTime fechaEvento) {
-        this.fechaEvento = fechaEvento;
-    }
-
-    public ModuloEntity getModulo() {
-        return modulo;
-    }
-
-    public void setModulo(ModuloEntity modulo) {
-        this.modulo = modulo;
-    }
-
-    public UsuarioInternoEntity getUsuario() {
-        return usuario;
-    }
-
-    public void setUsuario(UsuarioInternoEntity usuario) {
-        this.usuario = usuario;
-    }
-
-    public String getObservacion() {
-        return observacion;
-    }
-
-    public void setObservacion(String observacion) {
-        this.observacion = observacion;
-    }
-
     @PrePersist
     void antesDeInsertar() {
         if (fechaEvento == null) {
             fechaEvento = LocalDateTime.now();
         }
     }
-
 }

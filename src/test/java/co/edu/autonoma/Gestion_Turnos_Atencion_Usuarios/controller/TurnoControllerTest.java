@@ -1,8 +1,12 @@
 package co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.controller;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -18,13 +22,16 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.domain.EstadoTurno;
+import co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.dto.CambiarEstadoTurnoRequest;
 import co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.dto.EmitirTurnoRequest;
 import co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.dto.TurnoEmitidoResponse;
+import co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.dto.TurnoEstadoResponse;
 import co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.dto.TurnoPublicoResponse;
 import co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.exception.RecursoNoEncontradoException;
 import co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.exception.ReglaNegocioException;
 import co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.exception.SolicitudInvalidaException;
 import co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.service.EmisionTurnoService;
+import co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.service.TurnoEstadoService;
 import co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.service.TurnoService;
 
 @WebMvcTest(TurnoController.class)
@@ -38,6 +45,9 @@ class TurnoControllerTest {
 
     @MockitoBean
     private EmisionTurnoService emisionTurnoService;
+
+    @MockitoBean
+    private TurnoEstadoService turnoEstadoService;
 
     @Test
     void consultarTurnoExistenteResponde200() throws Exception {
@@ -107,5 +117,53 @@ class TurnoControllerTest {
     void emitirTurnoConJsonMalFormadoResponde400() throws Exception {
         mockMvc.perform(post("/api/turnos").contentType(MediaType.APPLICATION_JSON).content("{no es json"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void cambiarEstadoDelTurnoResponde200() throws Exception {
+        when(turnoEstadoService.cambiarEstado(eq(7L), any(CambiarEstadoTurnoRequest.class)))
+                .thenReturn(new TurnoEstadoResponse(7L, "ORI-261005-007", EstadoTurno.EN_ATENCION));
+
+        mockMvc.perform(patch("/api/turnos/7/estado").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"estado\": \"EN_ATENCION\", \"usuarioId\": 2}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(7))
+                .andExpect(jsonPath("$.estado").value("EN_ATENCION"));
+    }
+
+    @Test
+    void cambiarEstadoConTransicionNoPermitidaResponde409() throws Exception {
+        when(turnoEstadoService.cambiarEstado(eq(7L), any(CambiarEstadoTurnoRequest.class)))
+                .thenThrow(new ReglaNegocioException("Transición no permitida: FINALIZADO a EN_ESPERA"));
+
+        mockMvc.perform(patch("/api/turnos/7/estado").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"estado\": \"EN_ESPERA\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.mensaje").value("Transición no permitida: FINALIZADO a EN_ESPERA"));
+    }
+
+    @Test
+    void cancelarTurnoResponde204SinCuerpo() throws Exception {
+        mockMvc.perform(delete("/api/turnos/7"))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void cancelarTurnoInexistenteResponde404() throws Exception {
+        doThrow(new RecursoNoEncontradoException("No existe el turno 9"))
+                .when(turnoEstadoService).cancelar(9L);
+
+        mockMvc.perform(delete("/api/turnos/9"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.mensaje").value("No existe el turno 9"));
+    }
+
+    @Test
+    void cancelarTurnoEnAtencionResponde409() throws Exception {
+        doThrow(new ReglaNegocioException("Solo se puede cancelar un turno antes de iniciar su atención"))
+                .when(turnoEstadoService).cancelar(7L);
+
+        mockMvc.perform(delete("/api/turnos/7"))
+                .andExpect(status().isConflict());
     }
 }

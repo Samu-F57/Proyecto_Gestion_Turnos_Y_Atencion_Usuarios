@@ -4,9 +4,13 @@ import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
 @Table(name = "secuencias_turno")
+@Getter
+@Setter
 public class SecuenciaTurnoEntity {
 
     @EmbeddedId
@@ -14,20 +18,4 @@ public class SecuenciaTurnoEntity {
 
     @Column(name = "ultimo_consecutivo", nullable = false)
     private int ultimoConsecutivo;
-
-    public SecuenciaTurnoId getId() {
-        return id;
-    }
-
-    public void setId(SecuenciaTurnoId id) {
-        this.id = id;
-    }
-
-    public int getUltimoConsecutivo() {
-        return ultimoConsecutivo;
-    }
-
-    public void setUltimoConsecutivo(int ultimoConsecutivo) {
-        this.ultimoConsecutivo = ultimoConsecutivo;
-    }
 }

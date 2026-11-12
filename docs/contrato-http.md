@@ -4,7 +4,7 @@ Origen de cada petición:
 
 - **Contrato**: está en la sección 8 del documento del proyecto.
 - **Propuesta**: no está en el contrato. Se deriva de los roles (sección 4), las reglas de negocio y las entidades, porque el documento permite sumar lo necesario para el CRUD. Las formas de entrada y respuesta marcadas como propuesta **no están definidas** en los requisitos.
-- **Implementado**: ya existe en el código (los 4 GET y el POST de turnos).
+- **Implementado**: ya existe en el código (los 10 endpoints del contrato).
 
 Errores: los implementados devuelven `{"estado": 404, "mensaje": "..."}` para recurso inexistente y 400 para parámetros ausentes o inválidos.
 
@@ -73,40 +73,48 @@ Errores: los implementados devuelven `{"estado": 404, "mensaje": "..."}` para re
 - **Errores:** 400 si falta `servicioId` o los datos obligatorios del solicitante; 404 si el servicio o la prioridad no existen; 409 si el servicio está inactivo o fuera de horario, si el solicitante ya tiene un turno activo en ese servicio, o si la prioridad requiere autorización.
 - **Supuestos:** si el solicitante ya existe (mismo tipo y número de documento) se reutiliza sin actualizar sus datos. Las prioridades que requieren autorización se rechazan, porque el contrato no define cómo se autorizan. Los códigos 400, 404 y 409 son decisión del código, no del contrato.
 
-### POST /api/modulos/{id}/siguiente-turno — Contrato, pendiente
-- **Propósito:** selecciona y llama el siguiente turno elegible del módulo (RN-06, RN-07, RN-08, RN-09).
-- **Envía (propuesta):** `{"agenteId": 2}`
-- **Responde 200 (propuesta):**
+### POST /api/modulos/{id}/siguiente-turno — Implementado
+- **Propósito:** selecciona y llama el siguiente turno elegible del módulo: solo servicios habilitados (RN-06), por prioridad y orden de emisión (RN-08). Registra módulo, agente, fecha y historial (RN-09).
+- **Envía:** `{"agenteId": 2}`
+- **Responde 200:**
 ```json
 {"codigo": "ORI-261005-002", "estado": "LLAMADO", "modulo": "Módulo 1",
  "agente": "Agente Uno", "fechaLlamado": "2026-10-05T08:30:00"}
 ```
-- **Falta definir:** cómo se identifica al agente (no hay autenticación) y qué se responde si no hay turno elegible.
+- **Errores:** 400 si falta `agenteId`; 404 si el módulo o el usuario no existen, o si no hay turnos en espera; 409 si el módulo no está abierto, si el agente no es el del módulo, si el módulo ya tiene un turno en curso (RN-07) o si no tiene servicios habilitados.
+- **Supuestos:** el contrato no define la respuesta cuando no hay turno elegible; se usa 404. La respuesta no incluye el `id` del turno, porque el DTO se derivó del contrato.
 
-### PUT /api/servicios/{id} — Contrato, pendiente
+### PUT /api/servicios/{id} — Implementado
 - **Propósito:** reemplaza la configuración completa de un servicio.
-- **Envía (derivado de la tabla `servicios`):**
+- **Envía:**
 ```json
 {"codigo": "ORI", "nombre": "Orientación", "descripcion": "Información general",
  "activo": true, "horaApertura": "08:00:00", "horaCierre": "17:00:00"}
 ```
 - **Responde 200:** el servicio actualizado, con la misma forma que `GET /api/servicios`.
+- **Errores:** 400 si `codigo` no tiene de 2 a 10 letras mayúsculas, si falta `nombre` o si `horaCierre` no es posterior a `horaApertura`; 404 si el servicio no existe; 409 si el código o el nombre ya los usa otro servicio.
+- **Supuesto:** `descripcion` es opcional; al ser un reemplazo completo, si no se envía queda vacía.
 
-### PATCH /api/turnos/{id}/estado — Contrato, pendiente
-- **Propósito:** transición explícita y válida: iniciar atención, finalizar o marcar `NO_PRESENTE` (RN-05, RN-10).
-- **Envía (propuesta):** `{"estado": "EN_ATENCION", "usuarioId": 2, "observacion": null}`
-- **Responde 200 (propuesta):** `{"id": 7, "codigo": "ORI-261005-007", "estado": "EN_ATENCION"}`
-- **Falta definir:** quién es el actor y el código de error ante una transición inválida.
+### PATCH /api/turnos/{id}/estado — Implementado
+- **Propósito:** transición explícita y válida (RN-05, RN-10, RN-11).
+- **Envía:** `{"estado": "EN_ATENCION", "usuarioId": 2, "observacion": null}`. `usuarioId` y `observacion` son opcionales.
+- **Responde 200:** `{"id": 7, "codigo": "ORI-261005-007", "estado": "EN_ATENCION"}`
+- **Transiciones permitidas:** `LLAMADO` a `EN_ATENCION`, `NO_PRESENTE` o `CANCELADO`; `EN_ATENCION` a `FINALIZADO`; `EN_ESPERA` a `CANCELADO`. Pasar a `LLAMADO` solo ocurre con `siguiente-turno`.
+- **Errores:** 400 si falta `estado` o la observación supera 255 caracteres; 404 si el turno o el usuario no existen; 409 si la transición no está permitida.
+- **Supuesto:** `NO_PRESENTE` es un estado final.
 
-### PATCH /api/modulos/{id}/estado — Contrato, pendiente
+### PATCH /api/modulos/{id}/estado — Implementado
 - **Propósito:** abre, pausa o cierra un módulo.
-- **Envía (propuesta):** `{"estado": "ABIERTO", "agenteId": 2}` (el agente es obligatorio al abrir).
-- **Responde 200 (propuesta):** `{"id": 1, "codigo": "M1", "estado": "ABIERTO", "agente": "Agente Uno"}`
+- **Envía:** `{"estado": "ABIERTO", "agenteId": 2}`
+- **Responde 200:** `{"id": 1, "codigo": "M1", "estado": "ABIERTO", "agente": "Agente Uno"}`
+- **Reglas:** para abrir hace falta un agente activo con rol `AGENTE` (un módulo pausado conserva el suyo); solo un módulo abierto puede pausarse; cerrar libera al agente y se rechaza si hay un turno llamado o en atención.
+- **Errores:** 400 si falta `estado` o `agenteId` al abrir; 404 si el módulo o el usuario no existen; 409 si el estado es el mismo, la transición no aplica o el usuario no es un agente activo.
 
-### DELETE /api/turnos/{id} — Contrato, pendiente
-- **Propósito:** cancela lógicamente un turno que aún no inició atención (RN-11). El turno queda `CANCELADO`, no se borra.
+### DELETE /api/turnos/{id} — Implementado
+- **Propósito:** cancela lógicamente un turno que aún no inició atención (RN-11). El turno queda `CANCELADO` y se registra en el historial; no se borra.
 - **Envía:** nada.
-- **Responde (propuesta):** 204 sin cuerpo.
+- **Responde 204** sin cuerpo.
+- **Errores:** 404 si el turno no existe; 409 si ya está en atención, finalizado, cancelado o no presente.
 
 ## 2. Peticiones propuestas para el CRUD (no están en el contrato)
 

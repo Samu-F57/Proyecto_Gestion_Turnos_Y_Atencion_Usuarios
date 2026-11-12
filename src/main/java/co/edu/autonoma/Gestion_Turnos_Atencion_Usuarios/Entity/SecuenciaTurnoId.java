@@ -5,8 +5,10 @@ import jakarta.persistence.Embeddable;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.Objects;
+import lombok.Getter;
 
 @Embeddable
+@Getter
 public class SecuenciaTurnoId implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -23,14 +25,6 @@ public class SecuenciaTurnoId implements Serializable {
     public SecuenciaTurnoId(Long servicioId, LocalDate fechaOperativa) {
         this.servicioId = servicioId;
         this.fechaOperativa = fechaOperativa;
-    }
-
-    public Long getServicioId() {
-        return servicioId;
-    }
-
-    public LocalDate getFechaOperativa() {
-        return fechaOperativa;
     }
 
     @Override

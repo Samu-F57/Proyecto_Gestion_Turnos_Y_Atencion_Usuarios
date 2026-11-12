@@ -1,0 +1,562 @@
+{
+  "info": {
+    "name": "Gestión de turnos - pruebas de endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Ejecutar en orden. Requiere la aplicación en http://localhost:8080 y PostgreSQL con los scripts de database/. Variables: moduloId y agenteId usan los datos iniciales (módulo 1, agente 2)."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "servicioId",
+      "value": "1"
+    },
+    {
+      "key": "moduloId",
+      "value": "1"
+    },
+    {
+      "key": "agenteId",
+      "value": "2"
+    },
+    {
+      "key": "codigo",
+      "value": ""
+    },
+    {
+      "key": "turnoId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "01. GET listar servicios",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 200', function () { pm.response.to.have.status(200); });",
+              "const s = pm.response.json();",
+              "pm.test('Es una lista', function () { pm.expect(s).to.be.an('array'); });",
+              "if (s.length > 0) { pm.collectionVariables.set('servicioId', s[0].id); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/servicios",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "servicios"
+          ]
+        },
+        "description": "Lista los servicios activos y guarda el id del primero."
+      }
+    },
+    {
+      "name": "02. PATCH abrir módulo",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Módulo abierto', function () { pm.expect(pm.response.json().estado).to.eql('ABIERTO'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/modulos/{{moduloId}}/estado",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "modulos",
+            "{{moduloId}}",
+            "estado"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"estado\": \"ABIERTO\",\n  \"agenteId\": {{agenteId}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "description": "Con los datos iniciales: módulo 1 y agente 2. Si el módulo ya está abierto responde 409."
+      }
+    },
+    {
+      "name": "03. POST emitir turno",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 201', function () { pm.response.to.have.status(201); });",
+              "const t = pm.response.json();",
+              "pm.test('Turno en espera', function () { pm.expect(t.estado).to.eql('EN_ESPERA'); });",
+              "pm.collectionVariables.set('codigo', t.codigo);",
+              "pm.collectionVariables.set('turnoId', t.id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/turnos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "turnos"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"servicioId\": {{servicioId}},\n  \"solicitante\": {\n    \"tipoDocumento\": \"CC\",\n    \"numeroDocumento\": \"1020304050\",\n    \"nombreCompleto\": \"Ana Pérez\",\n    \"correo\": \"ana@correo.com\",\n    \"telefono\": \"3001234567\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "description": "Solo dentro del horario del servicio. Si la persona ya tiene un turno activo en el servicio responde 409."
+      }
+    },
+    {
+      "name": "04. GET consultar turno por código",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Es el turno emitido', function () { pm.expect(pm.response.json().codigo).to.eql(pm.collectionVariables.get('codigo')); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/turnos/{{codigo}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "turnos",
+            "{{codigo}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "05. POST llamar siguiente turno",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Turno llamado', function () { pm.expect(pm.response.json().estado).to.eql('LLAMADO'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/modulos/{{moduloId}}/siguiente-turno",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "modulos",
+            "{{moduloId}}",
+            "siguiente-turno"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"agenteId\": {{agenteId}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "description": "Llama el siguiente turno por prioridad y orden de emisión. Puede llamar un turno de otra prueba si estaba en espera."
+      }
+    },
+    {
+      "name": "06. PATCH iniciar atención",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('En atención', function () { pm.expect(pm.response.json().estado).to.eql('EN_ATENCION'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/turnos/{{turnoId}}/estado",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "turnos",
+            "{{turnoId}}",
+            "estado"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"estado\": \"EN_ATENCION\",\n  \"usuarioId\": {{agenteId}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "description": "Usa el id del turno emitido en el paso 03; si el paso 05 llamó otro turno, cambia {{turnoId}} por el suyo."
+      }
+    },
+    {
+      "name": "07. PATCH finalizar atención",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Finalizado', function () { pm.expect(pm.response.json().estado).to.eql('FINALIZADO'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/turnos/{{turnoId}}/estado",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "turnos",
+            "{{turnoId}}",
+            "estado"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"estado\": \"FINALIZADO\",\n  \"usuarioId\": {{agenteId}},\n  \"observacion\": \"Atención completa\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "08. POST emitir otro turno",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 201', function () { pm.response.to.have.status(201); });",
+              "pm.collectionVariables.set('turnoId', pm.response.json().id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/turnos",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "turnos"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"servicioId\": {{servicioId}},\n  \"solicitante\": {\n    \"tipoDocumento\": \"CC\",\n    \"numeroDocumento\": \"1020304050\",\n    \"nombreCompleto\": \"Ana Pérez\",\n    \"correo\": \"ana@correo.com\",\n    \"telefono\": \"3001234567\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "description": "La persona ya no tiene turno activo, así que puede pedir otro."
+      }
+    },
+    {
+      "name": "09. DELETE cancelar turno",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 204', function () { pm.response.to.have.status(204); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/turnos/{{turnoId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "turnos",
+            "{{turnoId}}"
+          ]
+        },
+        "description": "Cancela el turno del paso 08, que aún no inició atención."
+      }
+    },
+    {
+      "name": "10. PATCH cerrar módulo",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Módulo cerrado', function () { pm.expect(pm.response.json().estado).to.eql('CERRADO'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/modulos/{{moduloId}}/estado",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "modulos",
+            "{{moduloId}}",
+            "estado"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"estado\": \"CERRADO\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "11. PUT reemplazar servicio",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Devuelve el servicio', function () { pm.expect(pm.response.json().codigo).to.eql('ORI'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/servicios/{{servicioId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "servicios",
+            "{{servicioId}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"codigo\": \"ORI\",\n  \"nombre\": \"Orientación\",\n  \"descripcion\": \"Información general al público\",\n  \"activo\": true,\n  \"horaApertura\": \"08:00:00\",\n  \"horaCierre\": \"17:00:00\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "description": "Reemplaza la configuración con los valores de los datos iniciales del servicio ORI."
+      }
+    },
+    {
+      "name": "12. GET fila de un servicio",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Incluye turnos', function () { pm.expect(pm.response.json().turnos).to.be.an('array'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/filas?servicioId={{servicioId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "filas"
+          ],
+          "query": [
+            {
+              "key": "servicioId",
+              "value": "{{servicioId}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "13. GET indicadores del día",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Responde 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('Incluye cantidadAtendida', function () { pm.expect(pm.response.json()).to.have.property('cantidadAtendida'); });"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/indicadores?fecha=2026-10-05",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "indicadores"
+          ],
+          "query": [
+            {
+              "key": "fecha",
+              "value": "2026-10-05"
+            }
+          ]
+        },
+        "description": "Cambia la fecha por el día que quieras consultar (yyyy-MM-dd)."
+      }
+    }
+  ]
+}
