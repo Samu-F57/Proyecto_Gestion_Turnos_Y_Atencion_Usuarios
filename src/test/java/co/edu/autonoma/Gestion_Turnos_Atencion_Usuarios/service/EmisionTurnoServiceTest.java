@@ -2,6 +2,7 @@ package co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.within;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
@@ -13,6 +14,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 
@@ -228,5 +230,47 @@ class EmisionTurnoServiceTest {
         assertThatThrownBy(() -> servicio.emitir(sinDocumento))
                 .isInstanceOf(SolicitudInvalidaException.class)
                 .hasMessageContaining("numeroDocumento");
+    }
+
+    @Test
+    void emitir_turnoNuevo_quedaEnEsperaConFechaActual() {
+        // Arrange: con el reloj real, la fecha de emisión debe ser la de ahora
+        EmisionTurnoService conRelojReal = new EmisionTurnoService(servicioRepository, solicitanteRepository,
+                prioridadRepository, secuenciaRepository, turnoRepository, historialRepository,
+                Clock.systemDefaultZone());
+        ServicioEntity abiertoSiempre = servicioOrientacion(true);
+        abiertoSiempre.setHoraApertura(LocalTime.MIN);
+        abiertoSiempre.setHoraCierre(LocalTime.MAX);
+        when(servicioRepository.findById(1L)).thenReturn(Optional.of(abiertoSiempre));
+        when(prioridadRepository.findByNombre("NORMAL")).thenReturn(Optional.of(prioridad(false, true)));
+        when(solicitanteRepository.findByTipoDocumentoAndNumeroDocumento(TipoDocumento.CC, "1020304050"))
+                .thenReturn(Optional.empty());
+        when(solicitanteRepository.save(any(SolicitanteEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(secuenciaRepository.siguienteConsecutivo(anyLong(), any(LocalDate.class))).thenReturn(1);
+        when(turnoRepository.save(any(TurnoEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // Act
+        TurnoEmitidoResponse respuesta = conRelojReal.emitir(solicitud(null));
+
+        // Assert
+        assertThat(respuesta.servicio()).isEqualTo("Orientación");
+        assertThat(respuesta.estado()).isEqualTo(EstadoTurno.EN_ESPERA);
+        assertThat(respuesta.fechaEmision())
+                .isCloseTo(LocalDateTime.now(), within(5, ChronoUnit.SECONDS));
+    }
+
+    @Test
+    void emitir_servicioInactivo_noGuardaNada() {
+        // Arrange
+        when(servicioRepository.findById(1L)).thenReturn(Optional.of(servicioOrientacion(false)));
+
+        // Act
+        assertThatThrownBy(() -> servicio.emitir(solicitud(null)))
+                .isInstanceOf(ReglaNegocioException.class);
+
+        // Assert
+        verify(turnoRepository, never()).save(any(TurnoEntity.class));
+        verify(historialRepository, never()).save(any(HistorialTurnoEntity.class));
+        verify(solicitanteRepository, never()).save(any(SolicitanteEntity.class));
     }
 }

@@ -2,6 +2,7 @@ package co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
@@ -18,6 +19,8 @@ import co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.Entity.ServicioEntity;
 import co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.Entity.TurnoEntity;
 import co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.domain.EstadoTurno;
 import co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.dto.TurnoPublicoResponse;
+import co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.dto.ErrorResponse;
+import co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.exception.ManejadorExcepciones;
 import co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.exception.RecursoNoEncontradoException;
 import co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.repository.TurnoRepository;
 
@@ -87,5 +90,20 @@ class TurnoServiceTest {
         assertThatThrownBy(() -> turnoService.consultarPorCodigo("XXX"))
                 .isInstanceOf(RecursoNoEncontradoException.class)
                 .hasMessageContaining("XXX");
+    }
+
+    @Test
+    void consultarPorCodigo_inexistente_lanzaLaExcepcionQueSeConvierteEn404() {
+        // Arrange
+        when(turnoRepository.buscarPorCodigo("XXX")).thenReturn(Optional.empty());
+
+        // Act
+        RecursoNoEncontradoException error = assertThrows(RecursoNoEncontradoException.class,
+                () -> turnoService.consultarPorCodigo("XXX"));
+
+        // Assert: el manejador global traduce esa excepción a HTTP 404
+        ErrorResponse respuesta = new ManejadorExcepciones().manejarNoEncontrado(error);
+        assertThat(respuesta.estado()).isEqualTo(404);
+        assertThat(respuesta.mensaje()).contains("XXX");
     }
 }
