@@ -9,4 +9,8 @@ import co.edu.autonoma.Gestion_Turnos_Atencion_Usuarios.Entity.ServicioEntity;
 public interface ServicioRepository extends JpaRepository<ServicioEntity, Long> {
 
     List<ServicioEntity> findByActivoTrueOrderByNombreAsc();
+
+    boolean existsByCodigoAndIdNot(String codigo, Long id);
+
+    boolean existsByNombreAndIdNot(String nombre, Long id);
 }
